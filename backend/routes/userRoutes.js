@@ -4,7 +4,9 @@ import {
   updateUserProfile,
   deleteUserAccount,
   getUserStats,
-  updateReadingGoal
+  updateReadingGoal,
+  getReadingGoalProgress,
+  setMonthlyGoal
 } from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -37,5 +39,15 @@ router.get('/stats', getUserStats);
 // @route   PUT /api/v1/users/reading-goal
 // @access  Private
 router.put('/reading-goal', updateReadingGoal);
+
+// @desc    Get detailed reading goal progress
+// @route   GET /api/v1/users/reading-goal/progress
+// @access  Private
+router.get('/reading-goal/progress', getReadingGoalProgress);
+
+// @desc    Set monthly reading goal
+// @route   PUT /api/v1/users/reading-goal/monthly
+// @access  Private
+router.put('/reading-goal/monthly', setMonthlyGoal);
 
 export default router;

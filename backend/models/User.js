@@ -52,6 +52,16 @@ const userSchema = new mongoose.Schema({
       type: Number,
       default: 0,
       min: [0, 'Current reading count cannot be negative']
+    },
+    monthly: {
+      type: Map,
+      of: Number,
+      default: new Map()
+    },
+    streakTarget: {
+      type: Number,
+      default: 7,
+      min: [1, 'Streak target must be at least 1 day']
     }
   },
   isActive: {

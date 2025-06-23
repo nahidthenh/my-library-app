@@ -10,6 +10,9 @@ import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
+import bookRoutes from './routes/bookRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import statisticsRoutes from './routes/statisticsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -105,6 +108,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
+app.use(`/api/${apiVersion}/books`, bookRoutes);
+app.use(`/api/${apiVersion}/users`, userRoutes);
+app.use(`/api/${apiVersion}/stats`, statisticsRoutes);
 
 // Root endpoint
 // app.get('/', (req, res) => {

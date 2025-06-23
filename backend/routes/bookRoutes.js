@@ -7,7 +7,9 @@ import {
   deleteBook,
   updateBookStatus,
   searchBooks,
-  getBooksByGenre
+  getBooksByGenre,
+  getReadingStats,
+  getMonthlyReport
 } from '../controllers/bookController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -30,6 +32,16 @@ router.get('/search', searchBooks);
 // @route   GET /api/v1/books/genres
 // @access  Private
 router.get('/genres', getBooksByGenre);
+
+// @desc    Get reading statistics
+// @route   GET /api/v1/books/stats
+// @access  Private
+router.get('/stats', getReadingStats);
+
+// @desc    Get monthly reading report
+// @route   GET /api/v1/books/stats/monthly
+// @access  Private
+router.get('/stats/monthly', getMonthlyReport);
 
 // @desc    Get single book
 // @route   GET /api/v1/books/:id

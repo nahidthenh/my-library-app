@@ -252,6 +252,188 @@ const getBooksByGenre = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get reading statistics
+// @route   GET /api/v1/books/stats
+// @access  Private
+const getReadingStats = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Get basic reading statistics
+  const basicStats = await Book.getUserReadingStats(userId);
+
+  // Get reading activity by month (last 12 months)
+  const readingActivity = await Book.aggregate([
+    {
+      $match: {
+        userId: userId,
+        status: 'completed',
+        dateCompleted: { $exists: true }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$dateCompleted' },
+          month: { $month: '$dateCompleted' }
+        },
+        count: { $sum: 1 },
+        pages: { $sum: { $ifNull: ['$pageCount', 0] } },
+        books: {
+          $push: {
+            title: '$title',
+            author: '$author',
+            dateCompleted: '$dateCompleted',
+            pageCount: '$pageCount',
+            rating: '$rating'
+          }
+        }
+      }
+    },
+    {
+      $sort: { '_id.year': -1, '_id.month': -1 }
+    },
+    {
+      $limit: 12
+    }
+  ]);
+
+  // Get genre distribution
+  const genreStats = await Book.getBooksByGenre(userId);
+
+  // Get reading pace (average days to complete a book)
+  const readingPace = await Book.aggregate([
+    {
+      $match: {
+        userId: userId,
+        status: 'completed',
+        dateStarted: { $exists: true },
+        dateCompleted: { $exists: true }
+      }
+    },
+    {
+      $project: {
+        daysToComplete: {
+          $divide: [
+            { $subtract: ['$dateCompleted', '$dateStarted'] },
+            1000 * 60 * 60 * 24 // Convert milliseconds to days
+          ]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        averageDays: { $avg: '$daysToComplete' },
+        totalBooks: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Get current year progress
+  const currentYear = new Date().getFullYear();
+  const yearlyProgress = await Book.countDocuments({
+    userId: userId,
+    status: 'completed',
+    dateCompleted: {
+      $gte: new Date(currentYear, 0, 1),
+      $lt: new Date(currentYear + 1, 0, 1)
+    }
+  });
+
+  // Get reading streaks (consecutive days with reading activity)
+  const readingStreaks = await Book.aggregate([
+    {
+      $match: {
+        userId: userId,
+        status: 'completed',
+        dateCompleted: { $exists: true }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: '%Y-%m-%d', date: '$dateCompleted' }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { '_id': -1 }
+    },
+    {
+      $limit: 30 // Last 30 days
+    }
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      basicStats,
+      readingActivity,
+      genreStats,
+      readingPace: readingPace[0] || { averageDays: 0, totalBooks: 0 },
+      yearlyProgress,
+      readingStreaks
+    }
+  });
+});
+
+// @desc    Get monthly reading report
+// @route   GET /api/v1/books/stats/monthly
+// @access  Private
+const getMonthlyReport = asyncHandler(async (req, res) => {
+  const { year, month } = req.query;
+  const userId = req.user._id;
+
+  // Default to current month if not specified
+  const targetYear = year ? parseInt(year) : new Date().getFullYear();
+  const targetMonth = month ? parseInt(month) : new Date().getMonth() + 1;
+
+  const startDate = new Date(targetYear, targetMonth - 1, 1);
+  const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
+
+  // Books completed this month
+  const completedBooks = await Book.find({
+    userId: userId,
+    status: 'completed',
+    dateCompleted: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  }).sort({ dateCompleted: -1 });
+
+  // Books started this month
+  const startedBooks = await Book.find({
+    userId: userId,
+    dateStarted: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  }).sort({ dateStarted: -1 });
+
+  // Calculate statistics
+  const totalPages = completedBooks.reduce((sum, book) => sum + (book.pageCount || 0), 0);
+  const averageRating = completedBooks.length > 0
+    ? completedBooks.filter(book => book.rating).reduce((sum, book) => sum + book.rating, 0) / completedBooks.filter(book => book.rating).length
+    : 0;
+
+  res.status(200).json({
+    success: true,
+    data: {
+      month: targetMonth,
+      year: targetYear,
+      completedBooks,
+      startedBooks,
+      statistics: {
+        booksCompleted: completedBooks.length,
+        booksStarted: startedBooks.length,
+        totalPages,
+        averageRating: Math.round(averageRating * 10) / 10
+      }
+    }
+  });
+});
+
 export {
   getBooks,
   getBook,
@@ -260,5 +442,7 @@ export {
   deleteBook,
   updateBookStatus,
   searchBooks,
-  getBooksByGenre
+  getBooksByGenre,
+  getReadingStats,
+  getMonthlyReport
 };

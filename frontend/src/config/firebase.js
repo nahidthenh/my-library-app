@@ -33,13 +33,23 @@ const app = initializeApp(firebaseConfig);
 let analytics = null;
 try {
   if (firebaseConfig.measurementId && typeof window !== 'undefined') {
-    analytics = getAnalytics(app);
-    console.log('✅ Firebase Analytics initialized successfully');
+    // Firefox-specific fix for XrayWrapper cross-origin errors
+    const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
+    if (isFirefox) {
+      // Skip Analytics in Firefox to avoid XrayWrapper errors
+      console.log('ℹ️ Firebase Analytics skipped in Firefox to prevent XrayWrapper errors');
+      analytics = null;
+    } else {
+      analytics = getAnalytics(app);
+      console.log('✅ Firebase Analytics initialized successfully');
+    }
   } else {
     console.log('ℹ️ Firebase Analytics skipped (no measurementId or not in browser)');
   }
 } catch (error) {
   console.warn('⚠️ Firebase Analytics initialization failed:', error.message);
+  console.warn('🔧 This may be due to browser security restrictions (e.g., Firefox XrayWrapper)');
   analytics = null;
 }
 
