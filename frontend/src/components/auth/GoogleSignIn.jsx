@@ -1,22 +1,39 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { signInWithRedirect } from 'firebase/auth';
+import { auth, googleProvider } from '../../config/firebase';
 
 const GoogleSignIn = () => {
   const { signInWithGoogle, loading, error, clearError } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [showRedirectOption, setShowRedirectOption] = useState(false);
 
   const handleSignIn = async () => {
     clearError(); // Clear any previous errors
     setIsSigningIn(true);
     try {
       const result = await signInWithGoogle();
-      if (!result.success) {
+      if (!result.success && !result.redirect) {
         console.error('Sign in failed:', result.error);
+        // Show redirect option if popup failed
+        if (result.error?.includes('Pop-up was blocked')) {
+          setShowRedirectOption(true);
+        }
       }
     } catch (error) {
       console.error('Sign in error:', error);
     } finally {
       setIsSigningIn(false);
+    }
+  };
+
+  const handleRedirectSignIn = async () => {
+    try {
+      clearError();
+      console.log('🔄 Using redirect method for sign-in...');
+      await signInWithRedirect(auth, googleProvider);
+    } catch (error) {
+      console.error('❌ Redirect sign-in error:', error);
     }
   };
 
@@ -71,6 +88,20 @@ const GoogleSignIn = () => {
           </>
         )}
       </button>
+
+      {showRedirectOption && (
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800 mb-2">
+            Pop-up was blocked. Try the redirect method instead:
+          </p>
+          <button
+            onClick={handleRedirectSignIn}
+            className="w-full px-3 py-2 text-sm bg-yellow-100 text-yellow-800 border border-yellow-300 rounded hover:bg-yellow-200 transition-colors"
+          >
+            Sign in with Redirect
+          </button>
+        </div>
+      )}
     </div>
   );
 };

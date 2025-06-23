@@ -11,9 +11,11 @@ const initializeFirebase = () => {
       if (!process.env.FIREBASE_PROJECT_ID ||
         !process.env.FIREBASE_PRIVATE_KEY ||
         !process.env.FIREBASE_CLIENT_EMAIL ||
-        process.env.FIREBASE_PROJECT_ID === 'library-tracker-demo') {
-        console.warn('⚠️ Firebase configuration not provided or using demo values');
+        process.env.FIREBASE_PROJECT_ID === 'library-tracker-demo' ||
+        process.env.FIREBASE_PRIVATE_KEY.includes('YOUR_ACTUAL_PRIVATE_KEY_HERE')) {
+        console.warn('⚠️ Firebase configuration not provided or using demo/placeholder values');
         console.warn('🔄 Continuing without Firebase verification (development mode)');
+        console.warn('📝 To fix: Get Firebase service account key from Firebase Console > Project Settings > Service Accounts');
         return;
       }
 
