@@ -1,14 +1,14 @@
 import React from 'react';
 
-const StatCard = ({ 
-  title, 
-  value, 
-  icon, 
-  color = 'blue', 
-  subtitle, 
+const StatCard = ({
+  title,
+  value,
+  icon,
+  color = 'blue',
+  subtitle,
   trend,
   onClick,
-  loading = false 
+  loading = false
 }) => {
   const colorClasses = {
     blue: 'bg-blue-500',
@@ -27,21 +27,21 @@ const StatCard = ({
     neutral: 'text-gray-600'
   };
 
-  const cardClasses = `
-    bg-white rounded-lg shadow-sm border border-gray-200 p-6 
-    ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}
-  `;
+  const cardClasses = [
+    'card',
+    'p-6',
+    onClick ? 'card-interactive hover-lift' : 'card-hover',
+    'fade-in'
+  ].join(' ');
 
   if (loading) {
     return (
       <div className={cardClasses}>
-        <div className="animate-pulse">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-            <div className="ml-4 flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-            </div>
+        <div className="flex items-center">
+          <div className="w-12 h-12 loading-pulse rounded-lg"></div>
+          <div className="ml-4 flex-1">
+            <div className="h-4 loading-pulse rounded w-3/4 mb-2"></div>
+            <div className="h-6 loading-pulse rounded w-1/2"></div>
           </div>
         </div>
       </div>
@@ -51,21 +51,21 @@ const StatCard = ({
   return (
     <div className={cardClasses} onClick={onClick}>
       <div className="flex items-center">
-        <div className={`w-12 h-12 ${colorClasses[color]} rounded-lg flex items-center justify-center`}>
-          <span className="text-white text-xl">{icon}</span>
+        <div className={`w-12 h-12 ${colorClasses[color]} rounded-lg flex items-center justify-center shadow-sm hover-glow transition-all duration-200`}>
+          <span className="text-white text-xl scale-in">{icon}</span>
         </div>
         <div className="ml-4 flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-sm font-medium text-gray-600 slide-down">{title}</p>
           <div className="flex items-baseline">
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className="text-2xl font-bold text-gray-900 scale-in">{value}</p>
             {trend && (
-              <span className={`ml-2 text-sm font-medium ${trendColors[trend.direction]}`}>
+              <span className={`ml-2 text-sm font-medium ${trendColors[trend.direction]} bounce-in`}>
                 {trend.direction === 'up' ? '↗' : trend.direction === 'down' ? '↘' : '→'} {trend.value}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs text-gray-500 mt-1 fade-in">{subtitle}</p>
           )}
         </div>
       </div>

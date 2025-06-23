@@ -4,10 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { StatCard, ReadingProgress, RecentActivity, QuickActions } from '../components/dashboard';
 import { statisticsService } from '../services/statisticsService';
 import { bookService } from '../services/bookService';
+import { useResponsive } from '../hooks/useResponsive';
+import ResponsiveContainer from '../components/layout/ResponsiveContainer';
+import ResponsiveGrid from '../components/layout/ResponsiveGrid';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isMobile, isTablet, getResponsiveValue } = useResponsive();
 
   // State for dashboard data
   const [dashboardData, setDashboardData] = useState({
@@ -77,8 +81,8 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+      <main className={`${isMobile ? 'pb-20' : ''}`}>
+        <ResponsiveContainer maxWidth="7xl" className="py-6">
           {/* Welcome Section */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -103,7 +107,11 @@ const Dashboard = () => {
           )}
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <ResponsiveGrid
+            columns={{ xs: 1, sm: 2, lg: 4 }}
+            gap={getResponsiveValue({ xs: 'sm', md: 'md', lg: 'lg' })}
+            className="mb-6"
+          >
             <StatCard
               title="Currently Reading"
               value={dashboardData.stats?.basicStats?.inProgress || 0}
@@ -136,12 +144,16 @@ const Dashboard = () => {
               subtitle="Total pages"
               loading={dashboardData.loading}
             />
-          </div>
+          </ResponsiveGrid>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Reading Progress - Takes 2 columns */}
-            <div className="lg:col-span-2">
+          <ResponsiveGrid
+            columns={{ xs: 1, lg: 3 }}
+            gap={getResponsiveValue({ xs: 'sm', md: 'md', lg: 'lg' })}
+            className="mb-6"
+          >
+            {/* Reading Progress - Takes 2 columns on desktop */}
+            <div className={isTablet || isMobile ? 'col-span-1' : 'lg:col-span-2'}>
               <ReadingProgress
                 goalData={dashboardData.goalProgress}
                 loading={dashboardData.loading}
@@ -155,7 +167,7 @@ const Dashboard = () => {
                 loading={dashboardData.loading}
               />
             </div>
-          </div>
+          </ResponsiveGrid>
 
           {/* Quick Actions */}
           <QuickActions
@@ -163,7 +175,7 @@ const Dashboard = () => {
             onViewBooks={() => navigate('/books')}
             onViewAnalytics={() => navigate('/analytics')}
           />
-        </div>
+        </ResponsiveContainer>
       </main>
     </div>
   );
