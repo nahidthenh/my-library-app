@@ -5,6 +5,8 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
+import Books from './pages/Books';
+import BookDetail from './components/books/BookDetail';
 
 function App() {
   return (
@@ -21,6 +23,24 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/books"
+              element={
+                <ProtectedRoute>
+                  <Books />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/books/:id"
+              element={
+                <ProtectedRoute>
+                  <BookDetail />
                 </ProtectedRoute>
               }
             />
