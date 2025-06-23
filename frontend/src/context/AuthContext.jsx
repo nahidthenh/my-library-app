@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // Configure axios defaults
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
   axios.defaults.baseURL = apiBaseUrl;
 
   useEffect(() => {
@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }) => {
         if (firebaseUser) {
           // Get the ID token
           const idToken = await getIdToken(firebaseUser);
-          
+
           // Set the token in axios headers
           axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
-          
+
           // Store user data
           setUser({
             uid: firebaseUser.uid,
@@ -64,23 +64,39 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       setLoading(true);
-      
+
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await getIdToken(result.user);
-      
+
       // Send token to backend for verification and user creation
       try {
-        await axios.post('/auth/google', { idToken });
+        const response = await axios.post('/auth/google', { idToken });
+        console.log('✅ Backend authentication successful:', response.data);
       } catch (apiError) {
-        console.warn('Backend authentication failed:', apiError);
-        // Continue with frontend-only auth for now
+        console.warn('⚠️ Backend authentication failed:', apiError.response?.data?.message || apiError.message);
+        // Continue with frontend-only auth for development
+        if (apiError.response?.status === 401) {
+          setError('Authentication failed. Please try again.');
+          await signOut(auth);
+          return { success: false, error: 'Authentication failed' };
+        }
       }
-      
+
       return { success: true };
     } catch (error) {
-      console.error('Google sign-in error:', error);
-      setError(error.message);
-      return { success: false, error: error.message };
+      console.error('❌ Google sign-in error:', error);
+      let errorMessage = 'Sign in failed. Please try again.';
+
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Sign in was cancelled.';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Pop-up was blocked. Please allow pop-ups and try again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -89,15 +105,32 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setError(null);
+      setLoading(true);
+
+      // Sign out from Firebase
       await signOut(auth);
+
+      // Clear axios authorization header
       delete axios.defaults.headers.common['Authorization'];
+
+      // Clear user state
       setUser(null);
+
+      console.log('✅ Logout successful');
       return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
-      setError(error.message);
-      return { success: false, error: error.message };
+      console.error('❌ Logout error:', error);
+      const errorMessage = 'Logout failed. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Function to clear errors
+  const clearError = () => {
+    setError(null);
   };
 
   const value = {
@@ -106,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     error,
     signInWithGoogle,
     logout,
+    clearError,
     isAuthenticated: !!user,
   };
 
