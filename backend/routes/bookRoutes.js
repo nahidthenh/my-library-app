@@ -7,6 +7,7 @@ import {
   deleteBook,
   updateBookStatus,
   searchBooks,
+  advancedSearchBooks,
   getBooksByGenre,
   getReadingStats,
   getMonthlyReport
@@ -27,6 +28,11 @@ router.get('/', getBooks);
 // @route   GET /api/v1/books/search
 // @access  Private
 router.get('/search', searchBooks);
+
+// @desc    Advanced search books
+// @route   POST /api/v1/books/search/advanced
+// @access  Private
+router.post('/search/advanced', advancedSearchBooks);
 
 // @desc    Get books by genre
 // @route   GET /api/v1/books/genres

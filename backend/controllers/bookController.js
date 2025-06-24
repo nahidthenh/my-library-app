@@ -240,6 +240,140 @@ const searchBooks = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Advanced search books
+// @route   POST /api/v1/books/search/advanced
+// @access  Private
+const advancedSearchBooks = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const {
+    title,
+    author,
+    isbn,
+    genre,
+    status,
+    rating,
+    pageCount,
+    dateRange,
+    tags,
+    notes,
+    hasRating,
+    hasNotes,
+    page = 1,
+    limit = 20,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = req.body;
+
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Build advanced search query
+  const searchQuery = { userId };
+
+  // Text-based searches
+  if (title) {
+    searchQuery.title = { $regex: title, $options: 'i' };
+  }
+
+  if (author) {
+    searchQuery.author = { $regex: author, $options: 'i' };
+  }
+
+  if (isbn) {
+    searchQuery.isbn = { $regex: isbn, $options: 'i' };
+  }
+
+  if (genre) {
+    searchQuery.genre = genre;
+  }
+
+  if (status) {
+    searchQuery.status = status;
+  }
+
+  if (notes) {
+    searchQuery.notes = { $regex: notes, $options: 'i' };
+  }
+
+  // Rating range
+  if (rating && (rating.min || rating.max)) {
+    searchQuery.rating = {};
+    if (rating.min) {
+      searchQuery.rating.$gte = parseFloat(rating.min);
+    }
+    if (rating.max) {
+      searchQuery.rating.$lte = parseFloat(rating.max);
+    }
+  }
+
+  // Page count range
+  if (pageCount && (pageCount.min || pageCount.max)) {
+    searchQuery.pageCount = {};
+    if (pageCount.min) {
+      searchQuery.pageCount.$gte = parseInt(pageCount.min);
+    }
+    if (pageCount.max) {
+      searchQuery.pageCount.$lte = parseInt(pageCount.max);
+    }
+  }
+
+  // Date range
+  if (dateRange && (dateRange.start || dateRange.end)) {
+    searchQuery.createdAt = {};
+    if (dateRange.start) {
+      searchQuery.createdAt.$gte = new Date(dateRange.start);
+    }
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59, 999); // End of day
+      searchQuery.createdAt.$lte = endDate;
+    }
+  }
+
+  // Tags search
+  if (tags) {
+    const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+    if (tagArray.length > 0) {
+      searchQuery.tags = { $in: tagArray.map(tag => new RegExp(tag, 'i')) };
+    }
+  }
+
+  // Special filters
+  if (hasRating) {
+    searchQuery.rating = { $exists: true, $ne: null };
+  }
+
+  if (hasNotes) {
+    searchQuery.notes = { $exists: true, $ne: '', $ne: null };
+  }
+
+  // Get total count
+  const totalBooks = await Book.countDocuments(searchQuery);
+  const totalPages = Math.ceil(totalBooks / limitNum);
+
+  // Get books with pagination
+  const books = await Book.find(searchQuery)
+    .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+    .skip(skip)
+    .limit(limitNum);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      books,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalBooks,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1
+      },
+      searchCriteria: req.body
+    }
+  });
+});
+
 // @desc    Get books by genre
 // @route   GET /api/v1/books/genres
 // @access  Private
@@ -442,6 +576,7 @@ export {
   deleteBook,
   updateBookStatus,
   searchBooks,
+  advancedSearchBooks,
   getBooksByGenre,
   getReadingStats,
   getMonthlyReport

@@ -13,6 +13,7 @@ import authRoutes from './routes/authRoutes.js';
 import bookRoutes from './routes/bookRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import statisticsRoutes from './routes/statisticsRoutes.js';
+import importExportRoutes from './routes/importExportRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -111,6 +112,7 @@ app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/books`, bookRoutes);
 app.use(`/api/${apiVersion}/users`, userRoutes);
 app.use(`/api/${apiVersion}/stats`, statisticsRoutes);
+app.use(`/api/${apiVersion}/import-export`, importExportRoutes);
 
 // Root endpoint
 // app.get('/', (req, res) => {

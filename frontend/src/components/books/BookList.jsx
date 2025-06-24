@@ -3,7 +3,7 @@ import { Button, Input, Card } from '../common';
 import BookCard from './BookCard';
 import { bookService } from '../../services/bookService';
 
-const BookList = ({ onAddBook, onEditBook }) => {
+const BookList = ({ onAddBook, onEditBook, onImportExport }) => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,7 +41,7 @@ const BookList = ({ onAddBook, onEditBook }) => {
   const fetchBooks = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = {
         page: pagination.currentPage,
@@ -100,8 +100,8 @@ const BookList = ({ onAddBook, onEditBook }) => {
   };
 
   const handleStatusUpdate = (bookId, newStatus) => {
-    setBooks(prev => prev.map(book => 
-      book._id === bookId 
+    setBooks(prev => prev.map(book =>
+      book._id === bookId
         ? { ...book, status: newStatus }
         : book
     ));
@@ -132,10 +132,15 @@ const BookList = ({ onAddBook, onEditBook }) => {
             {pagination.totalBooks} book{pagination.totalBooks !== 1 ? 's' : ''} in your library
           </p>
         </div>
-        
-        <Button variant="primary" onClick={onAddBook}>
-          Add New Book
-        </Button>
+
+        <div className="flex space-x-3">
+          <Button variant="secondary" onClick={onImportExport}>
+            📊 Import/Export
+          </Button>
+          <Button variant="primary" onClick={onAddBook}>
+            Add New Book
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -150,26 +155,24 @@ const BookList = ({ onAddBook, onEditBook }) => {
                 onChange={handleSearch}
               />
             </div>
-            
+
             {/* View Mode Toggle */}
             <div className="flex border border-gray-300 rounded-md">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-2 text-sm font-medium rounded-l-md ${
-                  viewMode === 'grid'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                className={`px-3 py-2 text-sm font-medium rounded-l-md ${viewMode === 'grid'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 Grid
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-2 text-sm font-medium rounded-r-md border-l ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                className={`px-3 py-2 text-sm font-medium rounded-r-md border-l ${viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 List
               </button>
@@ -271,7 +274,7 @@ const BookList = ({ onAddBook, onEditBook }) => {
               {searchQuery ? 'No books found' : 'No books in your library yet'}
             </h3>
             <p className="text-gray-600">
-              {searchQuery 
+              {searchQuery
                 ? 'Try adjusting your search or filters'
                 : 'Start building your personal library by adding your first book!'
               }
@@ -285,7 +288,7 @@ const BookList = ({ onAddBook, onEditBook }) => {
         </Card>
       ) : (
         <div className={
-          viewMode === 'grid' 
+          viewMode === 'grid'
             ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
             : 'space-y-4'
         }>
@@ -308,7 +311,7 @@ const BookList = ({ onAddBook, onEditBook }) => {
             <div className="text-sm text-gray-700">
               Showing page {pagination.currentPage} of {pagination.totalPages}
             </div>
-            
+
             <div className="flex space-x-2">
               <Button
                 variant="secondary"
@@ -318,7 +321,7 @@ const BookList = ({ onAddBook, onEditBook }) => {
               >
                 Previous
               </Button>
-              
+
               <Button
                 variant="secondary"
                 size="sm"

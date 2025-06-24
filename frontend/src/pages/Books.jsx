@@ -3,11 +3,13 @@ import { MainLayout } from '../components/layout';
 import { Modal } from '../components/common';
 import BookList from '../components/books/BookList';
 import BookForm from '../components/books/BookForm';
+import { ImportExportModal } from '../components/import-export';
 import { bookService } from '../services/bookService';
 
 const Books = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -25,12 +27,17 @@ const Books = () => {
   const handleCloseModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
+    setShowImportExportModal(false);
     setEditingBook(null);
+  };
+
+  const handleImportSuccess = () => {
+    setRefreshKey(prev => prev + 1); // Refresh book list after import
   };
 
   const handleSubmitBook = async (bookData) => {
     setIsSubmitting(true);
-    
+
     try {
       if (editingBook) {
         // Update existing book
@@ -39,11 +46,11 @@ const Books = () => {
         // Create new book
         await bookService.createBook(bookData);
       }
-      
+
       // Close modal and refresh book list
       handleCloseModals();
       setRefreshKey(prev => prev + 1); // Force refresh of BookList
-      
+
     } catch (error) {
       console.error('Failed to save book:', error);
       alert(error.message || 'Failed to save book. Please try again.');
@@ -54,10 +61,11 @@ const Books = () => {
 
   return (
     <MainLayout>
-      <BookList 
+      <BookList
         key={refreshKey}
         onAddBook={handleAddBook}
         onEditBook={handleEditBook}
+        onImportExport={() => setShowImportExportModal(true)}
       />
 
       {/* Add Book Modal */}
@@ -88,6 +96,13 @@ const Books = () => {
           isLoading={isSubmitting}
         />
       </Modal>
+
+      {/* Import/Export Modal */}
+      <ImportExportModal
+        isOpen={showImportExportModal}
+        onClose={handleCloseModals}
+        onImportSuccess={handleImportSuccess}
+      />
     </MainLayout>
   );
 };

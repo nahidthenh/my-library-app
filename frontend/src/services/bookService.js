@@ -81,12 +81,28 @@ export const bookService = {
   // Search books
   searchBooks: async (query, params = {}) => {
     try {
-      const response = await api.get('/books/search', { 
-        params: { q: query, ...params } 
+      const response = await api.get('/books/search', {
+        params: { q: query, ...params }
       });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to search books');
+    }
+  },
+
+  // Advanced search books
+  advancedSearchBooks: async (searchCriteria, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc') => {
+    try {
+      const response = await api.post('/books/search/advanced', {
+        ...searchCriteria,
+        page,
+        limit,
+        sortBy,
+        sortOrder
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to perform advanced search');
     }
   },
 
