@@ -27,7 +27,7 @@ const Header = () => {
                 📚 Library Tracker
               </h1>
             </div>
-            
+
             {/* Navigation Links */}
             <nav className="hidden md:ml-8 md:flex md:space-x-8">
               <button
@@ -43,10 +43,10 @@ const Header = () => {
                 My Books
               </button>
               <button
-                onClick={() => navigate('/statistics')}
+                onClick={() => navigate('/analytics')}
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
               >
-                Statistics
+                Analytics
               </button>
             </nav>
           </div>
@@ -67,9 +67,8 @@ const Header = () => {
                   {user?.displayName || 'User'}
                 </span>
                 <svg
-                  className={`w-4 h-4 text-gray-500 transition-transform ${
-                    isProfileMenuOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`w-4 h-4 text-gray-500 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -85,7 +84,7 @@ const Header = () => {
                     <p className="text-sm font-medium text-gray-900">{user?.displayName}</p>
                     <p className="text-sm text-gray-500">{user?.email}</p>
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       navigate('/profile');
@@ -95,7 +94,7 @@ const Header = () => {
                   >
                     Profile Settings
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       navigate('/reading-goals');
@@ -105,7 +104,7 @@ const Header = () => {
                   >
                     Reading Goals
                   </button>
-                  
+
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       onClick={handleLogout}
@@ -137,10 +136,10 @@ const Header = () => {
             My Books
           </button>
           <button
-            onClick={() => navigate('/statistics')}
+            onClick={() => navigate('/analytics')}
             className="block w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
           >
-            Statistics
+            Analytics
           </button>
         </nav>
       </div>

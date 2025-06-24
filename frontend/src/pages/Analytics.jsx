@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { MainLayout } from '../components/layout';
 import { statisticsService } from '../services/statisticsService';
 import { ReadingVelocityChart, GenreDistributionChart, ReadingHabitsChart } from '../components/charts';
 import { StatCard } from '../components/dashboard';
@@ -17,9 +18,9 @@ const Analytics = () => {
     const fetchAnalytics = async () => {
       try {
         setAnalyticsData(prev => ({ ...prev, loading: true, error: null }));
-        
+
         const response = await statisticsService.getReadingAnalytics(timeframe);
-        
+
         setAnalyticsData({
           data: response.data,
           loading: false,
@@ -43,35 +44,32 @@ const Analytics = () => {
   const { data, loading, error } = analyticsData;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">📊 Reading Analytics</h1>
-              <p className="text-sm text-gray-600">Detailed insights into your reading habits</p>
-            </div>
-            
-            {/* Timeframe Selector */}
-            <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">Timeframe:</label>
-              <select
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-                <option value="all">All Time</option>
-              </select>
+    <MainLayout>
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          {/* Page Header */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">📊 Reading Analytics</h1>
+                <p className="text-sm text-gray-600">Detailed insights into your reading habits</p>
+              </div>
+
+              {/* Timeframe Selector */}
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-600">Timeframe:</label>
+                <select
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="month">This Month</option>
+                  <option value="year">This Year</option>
+                  <option value="all">All Time</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
           {/* Error State */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -131,11 +129,11 @@ const Analytics = () => {
             <div className="lg:col-span-2">
               <ReadingHabitsChart data={data} loading={loading} />
             </div>
-            
+
             {/* Reading Goals Summary */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Goal Summary</h3>
-              
+
               {loading ? (
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -156,10 +154,10 @@ const Analytics = () => {
                     <span className="text-sm text-gray-600">Remaining</span>
                     <span className="font-medium">{Math.max(0, data.readingGoals.yearly - data.readingGoals.current)} books</span>
                   </div>
-                  
+
                   <div className="pt-4 border-t border-gray-200">
                     <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                      <div 
+                      <div
                         className="bg-blue-500 h-3 rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(data.readingGoals.progress, 100)}%` }}
                       ></div>
@@ -179,7 +177,7 @@ const Analytics = () => {
           {data?.pageStats && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Reading Statistics</h3>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900">{data.pageStats.totalPages}</p>
@@ -201,8 +199,8 @@ const Analytics = () => {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </MainLayout>
   );
 };
 
