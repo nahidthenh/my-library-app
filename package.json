@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate-firebase": "node scripts/validate-firebase-config.js",
+    "dev:full": "concurrently \"npm run dev\" \"cd backend && npm run dev\"",
+    "setup:check": "npm run validate-firebase"
   },
   "dependencies": {
     "react": "^19.1.0",
