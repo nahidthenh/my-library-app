@@ -1,13 +1,58 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Library Tracker</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="background-color" content="#f9fafb" />
+  <meta name="display" content="standalone" />
+  <meta name="orientation" content="portrait-primary" />
+
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Library Tracker" />
+  <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+
+  <!-- Android PWA Support -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Library Tracker" />
+
+  <!-- SEO and Social -->
+  <meta name="description"
+    content="Track your reading progress, manage your personal library, and achieve your reading goals with Library Tracker." />
+  <meta name="keywords" content="books, reading, library, tracker, goals, progress, personal, management" />
+  <meta name="author" content="Library Tracker" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Library Tracker - Personal Reading Manager" />
+  <meta property="og:description" content="Track your reading progress and manage your personal library" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/icons/icon-512x512.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Library Tracker" />
+  <meta name="twitter:description" content="Track your reading progress and manage your personal library" />
+  <meta name="twitter:image" content="/icons/icon-512x512.png" />
+
+  <title>Library Tracker - Personal Reading Manager</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>
