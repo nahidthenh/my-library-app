@@ -2,6 +2,14 @@ import jwt from 'jsonwebtoken';
 import admin from 'firebase-admin';
 import { asyncHandler, AppError } from './errorMiddleware.js';
 import User from '../models/User.js';
+import {
+  verifySecureToken,
+  isTokenBlacklisted,
+  logSecurityEvent,
+  detectSuspiciousActivity,
+  sessionManagement,
+  tokenRotation
+} from './tokenSecurityMiddleware.js';
 
 // Initialize Firebase Admin SDK
 const initializeFirebase = () => {
@@ -66,6 +74,12 @@ const protect = asyncHandler(async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
+      // Check if token is blacklisted
+      if (isTokenBlacklisted(token)) {
+        logSecurityEvent('BLACKLISTED_TOKEN_ATTEMPT', req);
+        throw new AppError('Token has been revoked', 401);
+      }
+
       // Try to verify as Firebase token first
       const firebaseUser = await verifyFirebaseToken(token);
 
@@ -88,25 +102,67 @@ const protect = asyncHandler(async (req, res, next) => {
         }
 
         req.user = user;
+
+        // Apply security middleware for Firebase users
+        await new Promise((resolve, reject) => {
+          detectSuspiciousActivity(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        await new Promise((resolve, reject) => {
+          sessionManagement(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
         return next();
       }
 
-      // If Firebase verification fails, try JWT
+      // If Firebase verification fails, try enhanced JWT
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = await verifySecureToken(token, { requireType: 'access' });
         const user = await User.findById(decoded.id).select('-__v');
 
         if (!user) {
+          logSecurityEvent('JWT_USER_NOT_FOUND', req, { tokenId: decoded.jti });
           throw new AppError('User not found', 401);
         }
 
         if (!user.isActive) {
+          logSecurityEvent('INACTIVE_USER_JWT_ACCESS', req, { userId: user._id });
           throw new AppError('User account is deactivated', 401);
         }
 
         req.user = user;
+
+        // Apply security middleware for JWT users
+        await new Promise((resolve, reject) => {
+          detectSuspiciousActivity(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        await new Promise((resolve, reject) => {
+          sessionManagement(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        await new Promise((resolve, reject) => {
+          tokenRotation(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
         next();
       } catch (jwtError) {
+        logSecurityEvent('JWT_VERIFICATION_FAILED', req, { error: jwtError.message });
         throw new AppError('Invalid token', 401);
       }
     } catch (error) {

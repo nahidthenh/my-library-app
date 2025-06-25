@@ -9,11 +9,13 @@ import {
   setMonthlyGoal
 } from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { validateUser, sanitizeRequest } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
-// All routes are protected
+// All routes are protected and sanitized
 router.use(protect);
+router.use(sanitizeRequest);
 
 // @desc    Get user profile
 // @route   GET /api/v1/users/profile
@@ -23,7 +25,7 @@ router.get('/profile', getUserProfile);
 // @desc    Update user profile
 // @route   PUT /api/v1/users/profile
 // @access  Private
-router.put('/profile', updateUserProfile);
+router.put('/profile', validateUser, updateUserProfile);
 
 // @desc    Delete user account
 // @route   DELETE /api/v1/users/account

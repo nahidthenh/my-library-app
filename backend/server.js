@@ -29,17 +29,101 @@ connectDB();
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Security middleware
+// Enhanced security middleware with comprehensive helmet configuration
 app.use(helmet({
-  crossOriginEmbedderPolicy: false,
+  // Content Security Policy
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Only for development - remove in production
+        "https://apis.google.com",
+        "https://www.gstatic.com",
+        "https://www.googleapis.com"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https:",
+        "https://lh3.googleusercontent.com", // Google profile images
+        "https://books.google.com" // Book cover images
+      ],
+      connectSrc: [
+        "'self'",
+        "https://api.library-tracker.com",
+        "https://identitytoolkit.googleapis.com",
+        "https://securetoken.googleapis.com"
+      ],
+      frameSrc: [
+        "'self'",
+        "https://accounts.google.com"
+      ],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      manifestSrc: ["'self'"],
+      workerSrc: ["'self'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
     },
+    reportOnly: process.env.NODE_ENV === 'development'
   },
+
+  // HTTP Strict Transport Security
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+
+  // X-Frame-Options
+  frameguard: {
+    action: 'deny'
+  },
+
+  // X-Content-Type-Options
+  noSniff: true,
+
+  // X-XSS-Protection
+  xssFilter: true,
+
+  // Referrer Policy
+  referrerPolicy: {
+    policy: ['no-referrer', 'strict-origin-when-cross-origin']
+  },
+
+  // Cross-Origin Embedder Policy
+  crossOriginEmbedderPolicy: false, // Disable for Google OAuth compatibility
+
+  // Cross-Origin Opener Policy
+  crossOriginOpenerPolicy: {
+    policy: 'same-origin-allow-popups'
+  },
+
+  // Cross-Origin Resource Policy
+  crossOriginResourcePolicy: {
+    policy: 'cross-origin'
+  },
+
+  // Permissions Policy (formerly Feature Policy)
+  permissionsPolicy: {
+    camera: [],
+    microphone: [],
+    geolocation: [],
+    payment: [],
+    usb: [],
+    magnetometer: [],
+    gyroscope: [],
+    accelerometer: []
+  }
 }));
 
 // CORS configuration
@@ -67,19 +151,47 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-//   message: {
-//     error: 'Too many requests from this IP, please try again later.',
-//     retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000) / 1000)
-//   },
-//   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-//   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-// });
+// Rate limiting middleware
+import {
+  generalLimiter,
+  authLimiter,
+  uploadLimiter,
+  progressiveLimiter,
+  ipWhitelist,
+  adminBypass
+} from './middleware/rateLimitMiddleware.js';
 
-// app.use('/api/', limiter);
+// Security headers middleware
+import {
+  applySecurityHeaders,
+  apiSecurityHeaders,
+  sanitizeResponseHeaders
+} from './middleware/securityHeadersMiddleware.js';
+
+// API security middleware
+import {
+  applyApiSecurity,
+  requestLogger,
+  requestCorrelation,
+  healthCheck
+} from './middleware/apiSecurityMiddleware.js';
+
+// Apply comprehensive security middleware
+app.use(...applySecurityHeaders());
+app.use(...applyApiSecurity({
+  enableRequestLogging: true,
+  enableCorrelation: true,
+  enableHealthCheck: true,
+  enableVersioning: true,
+  supportedVersions: ['v1', 'v2']
+}));
+
+// Apply progressive rate limiting and IP whitelist
+app.use(progressiveLimiter);
+app.use(ipWhitelist(process.env.TRUSTED_IPS?.split(',') || []));
+
+// Apply general rate limiting to all API routes
+app.use('/api/', generalLimiter);
 
 // Compression middleware
 app.use(compression());
@@ -95,19 +207,24 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check endpoint
-// app.get('/health', (req, res) => {
-//   res.status(200).json({
-//     status: 'OK',
-//     timestamp: new Date().toISOString(),
-//     uptime: process.uptime(),
-//     environment: process.env.NODE_ENV,
-//     version: process.env.API_VERSION || 'v1'
-//   });
-// });
+// Health check endpoint (bypasses rate limiting)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: process.env.API_VERSION || 'v1',
+    rateLimiting: {
+      enabled: process.env.ENABLE_RATE_LIMITING !== 'false',
+      progressiveBlocking: process.env.ENABLE_PROGRESSIVE_BLOCKING !== 'false'
+    }
+  });
+});
 
-// API routes
+// API routes with security headers
 const apiVersion = process.env.API_VERSION || 'v1';
+app.use(`/api/${apiVersion}`, apiSecurityHeaders); // Apply API-specific headers to all API routes
 app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/books`, bookRoutes);
 app.use(`/api/${apiVersion}/users`, userRoutes);

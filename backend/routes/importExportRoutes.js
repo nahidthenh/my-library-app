@@ -9,6 +9,9 @@ import {
   importBooksJSON
 } from '../controllers/importExportController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { uploadLimiter, bulkLimiter } from '../middleware/rateLimitMiddleware.js';
+import { validateFileUpload, sanitizeRequest } from '../middleware/validationMiddleware.js';
+import { uploadSecurityHeaders } from '../middleware/securityHeadersMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,10 +32,10 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   // Accept CSV and JSON files
-  if (file.mimetype === 'text/csv' || 
-      file.mimetype === 'application/json' ||
-      file.originalname.endsWith('.csv') ||
-      file.originalname.endsWith('.json')) {
+  if (file.mimetype === 'text/csv' ||
+    file.mimetype === 'application/json' ||
+    file.originalname.endsWith('.csv') ||
+    file.originalname.endsWith('.json')) {
     cb(null, true);
   } else {
     cb(new Error('Only CSV and JSON files are allowed'), false);
@@ -47,15 +50,17 @@ const upload = multer({
   }
 });
 
-// All routes are protected
+// All routes are protected, secured, and sanitized
 router.use(protect);
+router.use(uploadSecurityHeaders);
+router.use(sanitizeRequest);
 
-// Export routes
-router.get('/books/csv', exportBooksCSV);
-router.get('/books/json', exportBooksJSON);
+// Export routes (bulk operations)
+router.get('/books/csv', bulkLimiter, exportBooksCSV);
+router.get('/books/json', bulkLimiter, exportBooksJSON);
 
-// Import routes
-router.post('/books/csv', upload.single('file'), importBooksCSV);
-router.post('/books/json', upload.single('file'), importBooksJSON);
+// Import routes (file upload + bulk operations)
+router.post('/books/csv', uploadLimiter, bulkLimiter, upload.single('file'), importBooksCSV);
+router.post('/books/json', uploadLimiter, bulkLimiter, upload.single('file'), importBooksJSON);
 
 export default router;
