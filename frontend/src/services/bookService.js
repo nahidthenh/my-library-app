@@ -1,5 +1,6 @@
 import axios from 'axios';
 import offlineStorage from '../utils/offlineStorage';
+import { getOrSetCache, setCache, getFromCache, clearCache } from '../utils/cacheManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
 
@@ -17,26 +18,52 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Cache configuration
+const CACHE_CONFIG = {
+  books: { ttl: 5 * 60 * 1000, maxSize: 100 }, // 5 minutes, 100 items
+  book: { ttl: 10 * 60 * 1000, maxSize: 50 }, // 10 minutes, 50 items
+  analytics: { ttl: 15 * 60 * 1000, maxSize: 20 }, // 15 minutes, 20 items
+  search: { ttl: 2 * 60 * 1000, maxSize: 30 } // 2 minutes, 30 items
+};
+
 // Book service functions
 export const bookService = {
   // Get all books with optional filters and pagination
   getBooks: async (params = {}) => {
-    try {
-      const response = await api.get('/books', { params });
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch books');
-    }
+    const cacheKey = `books_${JSON.stringify(params)}`;
+
+    return await getOrSetCache(
+      'books',
+      cacheKey,
+      async () => {
+        try {
+          const response = await api.get('/books', { params });
+          return response.data;
+        } catch (error) {
+          throw new Error(error.response?.data?.message || 'Failed to fetch books');
+        }
+      },
+      CACHE_CONFIG.books.ttl
+    );
   },
 
   // Get a single book by ID
   getBook: async (id) => {
-    try {
-      const response = await api.get(`/books/${id}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch book');
-    }
+    const cacheKey = `book_${id}`;
+
+    return await getOrSetCache(
+      'book',
+      cacheKey,
+      async () => {
+        try {
+          const response = await api.get(`/books/${id}`);
+          return response.data;
+        } catch (error) {
+          throw new Error(error.response?.data?.message || 'Failed to fetch book');
+        }
+      },
+      CACHE_CONFIG.book.ttl
+    );
   },
 
   // Create a new book

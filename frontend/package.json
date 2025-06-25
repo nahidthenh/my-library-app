@@ -6,12 +6,24 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:analyze": "ANALYZE=true vite build",
+    "build:prod": "NODE_ENV=production vite build",
+    "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write src/**/*.{js,jsx,ts,tsx,json,css,md}",
     "format:check": "prettier --check src/**/*.{js,jsx,ts,tsx,json,css,md}",
-    "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
+    "test:components": "vitest run src/components",
+    "test:pages": "vitest run src/pages",
+    "test:hooks": "vitest run src/hooks",
+    "analyze": "npm run build:analyze",
+    "size": "npm run build && npx bundlesize"
   },
   "dependencies": {
     "axios": "^1.6.7",
@@ -32,7 +44,9 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
+    "rollup-plugin-visualizer": "^6.0.3",
     "tailwindcss": "^3.4.1",
+    "terser": "^5.43.1",
     "vite": "^6.3.5"
   }
 }
