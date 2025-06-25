@@ -4,6 +4,8 @@ import { securityConfig, validateSecurityConfig } from '../../config/security.js
 import { applySecurityHeaders } from '../../middleware/securityHeadersMiddleware.js';
 import { applyApiSecurity } from '../../middleware/apiSecurityMiddleware.js';
 import { generalLimiter } from '../../middleware/rateLimitMiddleware.js';
+import { securityMonitor, vulnerabilityScanner } from '../../utils/securityMonitoring.js';
+import { secretsManager } from '../../utils/secretsManager.js';
 
 describe('Security Integration Tests', () => {
   let app;
@@ -28,7 +30,7 @@ describe('Security Integration Tests', () => {
     it('should have different settings for development and production', () => {
       const devCSP = securityConfig.headers.contentSecurityPolicy.development;
       const prodCSP = securityConfig.headers.contentSecurityPolicy.production;
-      
+
       expect(devCSP.scriptSrc).toContain("'unsafe-inline'");
       expect(prodCSP.scriptSrc).not.toContain("'unsafe-inline'");
     });
@@ -131,7 +133,7 @@ describe('Security Integration Tests', () => {
     it('should block requests exceeding limit', async () => {
       await request(app).get('/test').expect(200);
       await request(app).get('/test').expect(200);
-      
+
       const response = await request(app)
         .get('/test')
         .expect(429);
@@ -220,38 +222,38 @@ describe('Security Integration Tests', () => {
   describe('Error Handling Security', () => {
     beforeEach(() => {
       const { errorHandler } = require('../../middleware/errorMiddleware.js');
-      
+
       app.get('/error', (req, res, next) => {
         const error = new Error('Test error with sensitive data: password123');
         error.stack = 'Sensitive stack trace information';
         next(error);
       });
-      
+
       app.use(errorHandler);
     });
 
     it('should not leak sensitive information in production', async () => {
       process.env.NODE_ENV = 'production';
-      
+
       const response = await request(app)
         .get('/error')
         .expect(500);
 
       expect(response.body.error.stack).toBeUndefined();
       expect(response.body.error.details).toBeUndefined();
-      
+
       process.env.NODE_ENV = 'test';
     });
 
     it('should include debug info in development', async () => {
       process.env.NODE_ENV = 'development';
-      
+
       const response = await request(app)
         .get('/error')
         .expect(500);
 
       expect(response.body.error.stack).toBeDefined();
-      
+
       process.env.NODE_ENV = 'test';
     });
   });
@@ -286,7 +288,7 @@ describe('Security Integration Tests', () => {
     it('should log security events with proper format', () => {
       const { logSecurityEvent } = require('../../middleware/tokenSecurityMiddleware.js');
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const mockReq = {
         ip: '127.0.0.1',
         get: jest.fn().mockReturnValue('test-agent'),
@@ -294,12 +296,12 @@ describe('Security Integration Tests', () => {
         method: 'GET',
         user: { _id: 'test-user-id' }
       };
-      
-      logSecurityEvent('TEST_SECURITY_EVENT', mockReq, { 
+
+      logSecurityEvent('TEST_SECURITY_EVENT', mockReq, {
         severity: 'high',
         details: 'Test security event'
       });
-      
+
       expect(consoleSpy).toHaveBeenCalledWith(
         '🔒 Security Event:',
         expect.objectContaining({
@@ -314,8 +316,161 @@ describe('Security Integration Tests', () => {
           timestamp: expect.any(String)
         })
       );
-      
+
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Security Monitoring', () => {
+    beforeEach(async () => {
+      await securityMonitor.initialize();
+    });
+
+    it('should record security events', () => {
+      const event = securityMonitor.recordEvent('TEST_EVENT', {
+        test: 'data'
+      });
+
+      expect(event.type).toBe('TEST_EVENT');
+      expect(event.data.test).toBe('data');
+      expect(event.timestamp).toBeDefined();
+      expect(event.id).toBeDefined();
+    });
+
+    it('should create alerts when thresholds are exceeded', () => {
+      // Record multiple failed login events
+      for (let i = 0; i < 6; i++) {
+        securityMonitor.recordEvent('FAILED_LOGIN', {
+          ip: '127.0.0.1',
+          attempt: i + 1
+        });
+      }
+
+      const alerts = securityMonitor.getAlerts();
+      expect(alerts.length).toBeGreaterThan(0);
+
+      const failedLoginAlert = alerts.find(a =>
+        a.type === 'FAILED_LOGIN_THRESHOLD_EXCEEDED'
+      );
+      expect(failedLoginAlert).toBeDefined();
+    });
+
+    it('should generate security metrics', () => {
+      securityMonitor.recordEvent('TEST_EVENT_1');
+      securityMonitor.recordEvent('TEST_EVENT_2');
+      securityMonitor.recordEvent('TEST_EVENT_1');
+
+      const metrics = securityMonitor.getMetrics();
+
+      expect(metrics.metrics.TEST_EVENT_1.count).toBe(2);
+      expect(metrics.metrics.TEST_EVENT_2.count).toBe(1);
+    });
+
+    it('should acknowledge alerts', () => {
+      const alert = securityMonitor.createAlert({
+        type: 'TEST_ALERT',
+        level: 'medium',
+        message: 'Test alert'
+      });
+
+      const acknowledgedAlert = securityMonitor.acknowledgeAlert(alert.id, 'test-user');
+
+      expect(acknowledgedAlert.acknowledged).toBe(true);
+      expect(acknowledgedAlert.acknowledgedBy).toBe('test-user');
+    });
+
+    it('should generate security reports', () => {
+      securityMonitor.recordEvent('FAILED_LOGIN');
+      securityMonitor.recordEvent('SUSPICIOUS_REQUEST');
+
+      const report = securityMonitor.generateReport();
+
+      expect(report.summary.totalEvents).toBeGreaterThan(0);
+      expect(report.metrics).toBeDefined();
+      expect(report.recommendations).toBeDefined();
+    });
+  });
+
+  describe('Vulnerability Scanning', () => {
+    it('should scan for configuration vulnerabilities', async () => {
+      const scan = await vulnerabilityScanner.scanVulnerabilities();
+
+      expect(scan.timestamp).toBeDefined();
+      expect(scan.vulnerabilities).toBeDefined();
+      expect(scan.summary).toBeDefined();
+      expect(scan.summary.total).toBe(scan.vulnerabilities.length);
+    });
+
+    it('should detect weak JWT secrets', async () => {
+      const originalSecret = process.env.JWT_SECRET;
+      process.env.JWT_SECRET = 'weak'; // Set weak secret
+
+      const scan = await vulnerabilityScanner.scanVulnerabilities();
+      const weakSecretVuln = scan.vulnerabilities.find(v =>
+        v.type === 'WEAK_JWT_SECRET'
+      );
+
+      expect(weakSecretVuln).toBeDefined();
+      expect(weakSecretVuln.severity).toBe('high');
+
+      // Restore original secret
+      process.env.JWT_SECRET = originalSecret;
+    });
+
+    it('should detect default passwords', async () => {
+      process.env.TEST_PASSWORD = 'password'; // Set default password
+
+      const scan = await vulnerabilityScanner.scanVulnerabilities();
+      const defaultPasswordVuln = scan.vulnerabilities.find(v =>
+        v.type === 'DEFAULT_PASSWORD'
+      );
+
+      expect(defaultPasswordVuln).toBeDefined();
+      expect(defaultPasswordVuln.severity).toBe('critical');
+
+      // Clean up
+      delete process.env.TEST_PASSWORD;
+    });
+  });
+
+  describe('Secrets Management', () => {
+    beforeEach(async () => {
+      await secretsManager.initialize();
+    });
+
+    it('should store and retrieve secrets', async () => {
+      await secretsManager.setSecret('test-secret', 'secret-value');
+      const value = await secretsManager.getSecret('test-secret');
+
+      expect(value).toBe('secret-value');
+    });
+
+    it('should encrypt secrets', async () => {
+      await secretsManager.setSecret('encrypted-secret', 'sensitive-data');
+
+      // Check that the stored value is encrypted
+      const secretData = secretsManager.secrets.get('encrypted-secret');
+      expect(secretData.value).not.toBe('sensitive-data');
+      expect(secretData.value).toContain(':'); // Encrypted format
+    });
+
+    it('should handle secret metadata', async () => {
+      const metadata = { description: 'Test secret', category: 'testing' };
+      await secretsManager.setSecret('meta-secret', 'value', metadata);
+
+      const secrets = secretsManager.listSecrets();
+      const secret = secrets.find(s => s.key === 'meta-secret');
+
+      expect(secret.metadata.description).toBe('Test secret');
+      expect(secret.metadata.category).toBe('testing');
+    });
+
+    it('should audit secrets', () => {
+      const audit = secretsManager.auditSecrets();
+
+      expect(audit.timestamp).toBeDefined();
+      expect(audit.totalSecrets).toBeDefined();
+      expect(audit.secrets).toBeDefined();
     });
   });
 
@@ -324,9 +479,9 @@ describe('Security Integration Tests', () => {
       // Apply full security stack
       app.use(...applySecurityHeaders());
       app.use(...applyApiSecurity());
-      
+
       app.get('/secure', (req, res) => {
-        res.json({ 
+        res.json({
           message: 'secure endpoint',
           correlationId: req.correlationId,
           apiVersion: req.apiVersion
@@ -343,12 +498,12 @@ describe('Security Integration Tests', () => {
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['x-frame-options']).toBe('DENY');
       expect(response.headers['content-security-policy']).toBeDefined();
-      
+
       // Check API security
       expect(response.headers['x-correlation-id']).toBeDefined();
       expect(response.headers['x-request-id']).toBeDefined();
       expect(response.headers['api-version']).toBeDefined();
-      
+
       // Check response data
       expect(response.body.correlationId).toBeDefined();
       expect(response.body.apiVersion).toBeDefined();
